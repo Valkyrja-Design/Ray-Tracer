@@ -21,6 +21,7 @@ class vec3{
         vec3 operator-() const { return vec3(-e[0], -e[1], e[2]); }
         // Returns e[i]
         double operator[](int i) const { return e[i]; } 
+        
         // Returns reference to e[i]
         double& operator[](int i) { return e[i]; }
 

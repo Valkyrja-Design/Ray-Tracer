@@ -1,23 +1,19 @@
+#include "utilities/general.h"
+
+#include "utilities/hittable_list.h"
+#include "utilities/sphere.h"
 #include "utilities/color.h"
-#include "utilities/vec3.h"
-#include "utilities/ray.h"
 
 #include <iostream>
 
 using namespace std;
 
-bool hit_sphere(const point3& center, double radius, const ray& r){
-    auto oc = r.origin() - center;
-    auto b = 2*(dot(r.direction(), oc));
-    auto a = r.direction().length_squared();
-    auto c = oc.length_squared()-radius*radius;
-    return (b*b-4*a*c >= 0);
-}
-
-color ray_color(const ray& r){
-    if (hit_sphere(point3(0, 0, -1), 0.5, r)){
-        return color(1, 0, 0);
+color ray_color(const ray& r, const hittable& world){
+    hit_record rec;
+    if (world.hit(r, 0, infinity, rec)){
+        return 0.5*(rec.normal+color(1.0, 1.0, 1.0));
     }
+
     vec3 unit_direction = unit_vector(r.direction());
     auto t = 0.5*(unit_direction.y()+1.0);
     // Blends color between white and blue according to the y height of ray direction
@@ -30,6 +26,11 @@ int main(){
     const int image_width = 400;
     const int image_height = static_cast<int>(image_width / aspect_ratio);
 
+    // World
+    hittable_list world;
+    world.add(make_shared<sphere>(point3(0,0,-1), 0.5));
+    world.add(make_shared<sphere>(point3(0,-100.5,-1), 100));
+
     // Camera 
 
     auto viewport_height = 2.0;
@@ -41,7 +42,7 @@ int main(){
     auto vertical = point3(0, viewport_height, 0);
     auto lower_left_corner = origin - horizontal/2 - vertical/2 - vec3(0, 0, focal_length);
 
-    //Render 
+    // Render 
     
     cout<<"P3\n"<<image_width<<" "<<image_height<<"\n255\n";
     for (int j = image_height-1; j>=0; j--){
@@ -50,7 +51,7 @@ int main(){
             double u = double(i) / (image_width - 1);
             double v = double(j) / (image_height - 1);
             ray r(origin, lower_left_corner + u*horizontal + v*vertical - origin);
-            color pixel_color = ray_color(r);
+            color pixel_color = ray_color(r, world);
             write_color(cout, pixel_color);
         }        
     }
