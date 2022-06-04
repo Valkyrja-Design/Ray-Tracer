@@ -1,5 +1,3 @@
 {
-    "files.associations": {
-        "iostream": "c"
-    }
+    "sonarlint.pathToCompileCommands": "${workspaceFolder}\\build\\compile_commands.json"
 }

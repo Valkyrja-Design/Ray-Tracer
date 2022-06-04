@@ -3,11 +3,14 @@
 
 #include "ray.h"
 
+class material;
+
 // Stores record of an intersection point
 struct hit_record{
     point3 p;
     vec3 normal;
     double t;
+    shared_ptr<material> mat_ptr;
     // normal always points outward
 
     bool front_face;
