@@ -3,6 +3,11 @@
 
 #include "vec3.h"
 
+struct RayResult{
+    int index;
+    color col;
+};
+
 class ray{
     
     public:

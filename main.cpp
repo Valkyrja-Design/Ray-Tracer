@@ -7,6 +7,14 @@
 #include "utilities/material.h"
 
 #include <iostream>
+#include <chrono>
+#include <fstream>
+#include <string>
+#include <cstring>
+#include <mutex>
+#include <utility>
+#include <condition_variable>
+#include <future>
 
 using namespace std;
 
@@ -84,11 +92,17 @@ color ray_color(const ray& r, const hittable& world, int depth){
 
 int main(){
     // Image dimensions
-    const auto aspect_ratio = 3.0 / 2.0;
+    const auto aspect_ratio = 16.0/9.0;
     const int image_width = 1200;
     const int image_height = static_cast<int>(image_width / aspect_ratio);
-    const int samples_per_pixel = 500;
+    const int samples_per_pixel = 10;
     const int max_depth = 50;
+    const int pixelCount = image_height*image_width;
+
+    // Image 
+    vec3* image = new vec3[image_height*image_width];
+    memset(&image[0], 0, image_height * image_width * sizeof(vec3));
+    cout<<(sizeof(vec3))<<"\n";
 
     // World
 
@@ -104,23 +118,81 @@ int main(){
 
     camera cam(lookfrom, lookat, vup, 20, aspect_ratio, aperture, dist_to_focus);
 
-    // Threads 
-    
+    // Multithreading 
+
+    mutex m;
+    condition_variable cvResults;
+    vector<future<RayResult>> futures;
+
     // Render 
-    
-    cout<<"P3\n"<<image_width<<" "<<image_height<<"\n255\n";
-    for (int j = image_height-1; j >= 0; --j) {
+      
+    auto curr_time = std::chrono::high_resolution_clock::now();
+
+    for (int j = image_height-1; j>=0 ; j--) {
         std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
         for (int i = 0; i < image_width; ++i) {
-            color pixel_color(0, 0, 0);
-            for (int s = 0; s < samples_per_pixel; ++s) {
-                auto u = (i + random_double()) / (image_width-1);
-                auto v = (j + random_double()) / (image_height-1);
-                ray r = cam.get_ray(u, v);
-                pixel_color += ray_color(r, world, max_depth);
+            auto future_ = async(launch::async | launch::deferred, 
+            [&cam, &world, &samples_per_pixel, i, j, image_width, image_height, &cvResults]() -> RayResult{
+                color pixel_color(0, 0, 0);
+                for (int s = 0; s < samples_per_pixel; ++s) {
+                    auto u = (i + random_double()) / (image_width-1);
+                    auto v = (j + random_double()) / (image_height-1);
+                    ray r = cam.get_ray(u, v);
+                    pixel_color += ray_color(r, world, max_depth);
+                }
+                // write_color(std::cout, pixel_color, samples_per_pixel);
+                pixel_color /= samples_per_pixel;
+                pixel_color = color(sqrt(pixel_color[0]), sqrt(pixel_color[1]), sqrt(pixel_color[2]));
+                int index = (image_height-j-1)*image_width + i;
+                RayResult result;
+                result.index = index;
+                result.col = pixel_color;
+                return result;
+            });
+
+            {
+                lock_guard<mutex> lk(m);
+                futures.push_back(move(future_));
             }
-            write_color(std::cout, pixel_color, samples_per_pixel);
         }
     }
+    {
+        unique_lock<mutex> lk(m);
+        cvResults.wait(lk, [&futures, &pixelCount]{
+            return futures.size() == pixelCount;
+        });
+
+    }
+
+    for (future<RayResult>& rr : futures){
+        RayResult result = rr.get();
+        image[result.index] = result.col;
+    }
+
     cerr<<"\nDone.\n";
+    auto time_taken = (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now()-curr_time));
+    int timeMs = static_cast<int>(time_taken.count());
+    cerr<<"Time taken : "<<timeMs<<" s.\n";
+
+    string filename = "image.ppm";
+    ofstream fileHandler;
+    fileHandler.open(filename, ios::out | ios::binary);
+    if (!fileHandler.is_open()){
+        return 0;
+    }
+    fileHandler<<"P3\n"<<image_width<<" "<<image_height<<"\n255\n";
+    for (unsigned int i=0;i<(image_height * image_width);i++){
+        auto r = image[i].x();
+        auto g = image[i].y();
+        auto b = image[i].z();
+        fileHandler <<static_cast<int>(256*clamp(r, 0, 0.999))<<" "
+                    <<static_cast<int>(256*clamp(g, 0, 0.999))<<" "
+                    <<static_cast<int>(256*clamp(b, 0, 0.999))<<"\n";
+    }
+
+    cerr<<"File saved.\n";
+    fileHandler.close();
+    delete[] image;
+
+    return 0;
 }

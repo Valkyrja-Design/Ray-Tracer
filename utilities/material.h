@@ -68,7 +68,7 @@ class dielectric : public material {
 
             vec3 unit_direction = unit_vector(r_in.direction());
             auto cos_theta = fmin(1.0, dot(-unit_direction, rec.normal));
-            auto sin_theta = sqrt(1-cos_theta*cos_theta);
+            auto sin_theta = sqrt(1.0-cos_theta*cos_theta);
 
             auto cannot_refract = refractive_ratio * sin_theta > 1.0;
             vec3 direction;
