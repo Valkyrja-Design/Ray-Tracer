@@ -102,7 +102,7 @@ int main(){
     // Image 
     vec3* image = new vec3[image_height*image_width];
     memset(&image[0], 0, image_height * image_width * sizeof(vec3));
-    cout<<(sizeof(vec3))<<"\n";
+    // cout<<(sizeof(vec3))<<"\n";
 
     // World
 
