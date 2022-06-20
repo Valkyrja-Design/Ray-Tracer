@@ -1,8 +1,8 @@
 {
-    "sonarlint.pathToCompileCommands": "${workspaceFolder}\\build\\compile_commands.json",
     "files.associations": {
         "*.cpp": "cpp",
         "iostream": "cpp",
         "*.tcc": "cpp"
-    }
+    },
+    "sonarlint.pathToCompileCommands": "${workspaceFolder}\\build\\compile_commands.json"
 }
