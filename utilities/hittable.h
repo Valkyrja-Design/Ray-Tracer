@@ -12,6 +12,11 @@ struct hit_record{
     vec3 normal;
     double t;
     shared_ptr<material> mat_ptr;
+
+    // These are coordinates in uv texture space
+    double u;
+    double v;
+
     // normal always points outward
 
     bool front_face;

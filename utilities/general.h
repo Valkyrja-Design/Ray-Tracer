@@ -1,7 +1,8 @@
 #ifndef GENERAL_H
 #define GENERAL_H
 
-#include <cmath>
+// #include <cmath>
+#include "math.h"
 #include <limits>
 #include <memory>
 #include <cstdlib>

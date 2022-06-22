@@ -3,6 +3,7 @@
 
 #include "general.h"
 
+// Axis-aligned Bounding Box
 class aabb {
     public:
         aabb (){}
@@ -34,6 +35,7 @@ inline bool aabb :: hit (const ray& r, double t_min, double t_max) const {
     return true;
 }
 
+// Returns the box surrounding two given boxes
 aabb surrounding_box(const aabb& box0, const aabb& box1){
     point3 small(fmin(box0.min().x(), box1.min().x()),
                  fmin(box0.min().y(), box1.min().y()),
