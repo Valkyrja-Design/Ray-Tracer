@@ -10,6 +10,11 @@ struct hit_record;
 class material{
 
     public:
+        
+        virtual color emitted(double u, double v, const point3& p) const {
+            return color(0, 0, 0);
+        }
+
         virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered) const = 0;
 };
 
@@ -94,6 +99,35 @@ class dielectric : public material {
             r0 = r0*r0;
             return r0 + (1-r0)*pow((1-cosine), 5);
         }
+};
+
+// Light emitting material
+class diffuse_light : public material {
+    public:
+        diffuse_light(shared_ptr<texture> t) : emit(t){}
+        diffuse_light(color c) : emit(make_shared<solid_color>(c)){}
+
+        virtual bool scatter(
+            const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
+        ) const override {
+            // auto scatter_direction = rec.normal + random_unit_vector();
+
+            // // Degenerate scatter direction 
+            // if (scatter_direction.near_zero())
+            //     scatter_direction = rec.normal;
+    
+            // scattered = ray(rec.p, scatter_direction, r_in.time());
+            // attenuation = emit->value(rec.u, rec.v, rec.p);
+            // return true;
+            return false;
+        }
+
+        virtual color emitted(double u, double v, const point3& p) const override {
+            return emit->value(u, v, p);
+        }
+
+    public:
+        shared_ptr<texture> emit;
 };
 
 #endif

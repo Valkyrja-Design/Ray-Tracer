@@ -7,6 +7,7 @@
 #include "utilities/material.h"
 #include "utilities/moving_sphere.h"
 #include "utilities/texture.h"
+#include "utilities/aarect.h"
 
 #include <iostream>
 #include <chrono>
@@ -99,49 +100,90 @@ hittable_list image_textures() {
     auto _surface = make_shared<lambertian>(_texture);
     auto _texture1 = make_shared<image_texture>("texture images/Beautiful Mona.jpg");
     auto _surface1 = make_shared<lambertian>(_texture1);
+    auto light_source = make_shared<diffuse_light>(color(4, 4, 4));
     objects.add(make_shared<sphere>(point3(0, 0, -2), 2, _surface1));
     objects.add(make_shared<sphere>(point3(0, 0, 2), 2, _surface));
+    objects.add(make_shared<sphere>(point3(0, 3, 0), 5, light_source));
     return objects;
 }
 
-color ray_color(const ray& r, const hittable& world, int depth){
+hittable_list simple_light() {
+    hittable_list objects;
+
+    // auto pertext = make_shared<noise_texture>(4);
+    // objects.add(make_shared<sphere>(point3(0,-1000,0), 1000, make_shared<lambertian>(pertext)));
+    // objects.add(make_shared<sphere>(point3(0,2,0), 2, make_shared<lambertian>(pertext)));
+
+    auto _texture = make_shared<image_texture>("texture images/Renne (1).png");
+    auto _texture1 = make_shared<image_texture>("texture images/Beautiful Mona.jpg");
+    auto difflight = make_shared<diffuse_light>(color(4,4,4));
+    auto _checker = make_shared<checker_texture>(color(0, 0, 0), color(1, 1, 1));
+    auto _floor = make_shared<lambertian>(_checker);
+    auto _surface = make_shared<lambertian>(_texture);
+    auto _surface1 = make_shared<lambertian>(_texture1);
+
+    objects.add(make_shared<sphere>(point3(0, 6, 0), 1, difflight));
+    objects.add(make_shared<sphere>(point3(0, -1000, 0), 1000, _floor));
+    objects.add(make_shared<sphere>(point3(0, 2, -3), 2, _surface1));
+    objects.add(make_shared<sphere>(point3(0, 2, 3), 2, _surface));
+
+    objects.add(make_shared<xy_rect>(2, 5, 1, 3, 5, difflight));
+    objects.add(make_shared<xy_rect>(2, 4, 1, 3, -5, difflight));
+    // objects.add(make_shared<xy_rect>(1, 4, 1, 3, -1.5, difflight));
+    objects.add(make_shared<xy_rect>(1, 4, 1, 3, 0.5, difflight));
+
+
+    return objects;
+}
+
+hittable_list cornell_box() {
+    hittable_list objects;
+
+    auto red   = make_shared<lambertian>(color(.65, .05, .05));
+    auto white = make_shared<lambertian>(color(.73, .73, .73));
+    auto green = make_shared<lambertian>(color(.12, .45, .15));
+    auto light = make_shared<diffuse_light>(color(15, 15, 15));
+
+    objects.add(make_shared<yz_rect>(0, 555, 0, 555, 555, green));
+    objects.add(make_shared<yz_rect>(0, 555, 0, 555, 0, red));
+    objects.add(make_shared<xz_rect>(213, 343, 227, 332, 554, light));
+    objects.add(make_shared<xz_rect>(0, 555, 0, 555, 0, white));
+    objects.add(make_shared<xz_rect>(0, 555, 0, 555, 555, white));
+    objects.add(make_shared<xy_rect>(0, 555, 0, 555, 555, white));
+
+    return objects;
+}
+
+color ray_color(const ray& r, const color& background, const hittable& world, int depth){
     hit_record rec;
 
+    // If max depth is reached no more light is scattered
     if (depth <= 0)
         return color(0,0,0);
 
-    if (world.hit(r, 0.001, infinity, rec)) {
-        // 1st diffuse method (offset by normal)
-        // point3 target = rec.p + rec.normal + random_unit_vector();
-        
-        // 2nd diffuse method (point in same hemisphere as normal (no offset)) Hemispherical scattering
-        // point3 target = rec.p + random_in_hemisphere(rec.normal);
-        ray scattered;
-        color attenuation;
-        if (rec.mat_ptr->scatter(r, rec, attenuation, scattered)){
-            return attenuation * ray_color(scattered, world, depth-1);
-        }
-        return color(0, 0, 0);
+    // If ray hits nothing we return the background color
+    if (!world.hit(r, 0.001, infinity, rec)){
+        return background;
     }
 
-    vec3 unit_direction = unit_vector(r.direction());
-    auto t = 0.5*(unit_direction.y()+1.0);
-    // Blends color between white and blue according to the y height of ray direction
-    return (1.0-t)*color(1.0, 1.0, 1.0)+t*color(1.0, 1.0, 1.0);
+    ray scattered;
+    color attenuation;
+    color emmited = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
+
+    if (!rec.mat_ptr->scatter(r, rec, attenuation, scattered))
+        return emmited;
+
+    return emmited + attenuation * ray_color(scattered, background, world, depth-1);
 }   
 
 int main(){
     // Image dimensions
-    const auto aspect_ratio = 16.0/9.0;
-    const int image_width = 800;
-    const int image_height = static_cast<int>(image_width / aspect_ratio);
-    const int samples_per_pixel = 200;
+    auto aspect_ratio = 16.0/9.0;
+    int image_width = 800;
     const int max_depth = 50;
-    const int pixelCount = image_height*image_width;
 
-    // Image 
-    vec3* image = new vec3[image_height*image_width];
-    memset(&image[0], 0, image_height * image_width * sizeof(vec3));
+    int samples_per_pixel = 200;
+
     // cout<<(sizeof(vec3))<<"\n";
 
     // World
@@ -152,38 +194,74 @@ int main(){
     point3 lookat;
     auto vfov = 40.0;
     auto aperture = 0.0;
+    color background;
 
     switch (0) {
+        // Random scene
         case 1:
             world = random_scene();
             lookfrom = point3(13,2,3);
+            background = color(0.7, 0.8, 1.0);
             lookat = point3(0,0,0);
             vfov = 20.0;
             aperture = 0.1;
             break;
 
+        // Scene with two spheres
         case 2:
             world = two_spheres();
             lookfrom = point3(13,2,3);
+            background = color(0.7, 0.8, 1.0);
             lookat = point3(0,0,0);
             vfov = 20.0;
             break;
 
+        // Scene with two perlin texture spheres
         case 3:
             world = two_perlin_spheres();
             lookfrom = point3(13,2,3);
+            background = color(0.7, 0.8, 1.0);
+            lookat = point3(0,0,0);
+            vfov = 20.0;
+            break;
+    
+        // Scene with image textures applied onto spheres
+        case 4:
+            world = image_textures();
+            lookfrom = point3(13,2,3);
+            background = color(0.7, 0.8, 1.0);
             lookat = point3(0,0,0);
             vfov = 20.0;
             break;
         
-        default:
-        case 4:
-            world = image_textures();
-            lookfrom = point3(13,2,3);
-            lookat = point3(0,0,0);
+        // Scene with light sources
+        case 5:
+            world = simple_light();
+            samples_per_pixel = 400;
+            background = color(0,0,0);
+            lookfrom = point3(26,3,6);
+            lookat = point3(0,2,0);
             vfov = 20.0;
             break;
+
+        default:
+        case 6:
+            world = cornell_box();
+            aspect_ratio = 1.0;
+            image_width = 600;
+            samples_per_pixel = 200;
+            background = color(0,0,0);
+            lookfrom = point3(278, 278, -800);
+            lookat = point3(278, 278, 0);
+            vfov = 40.0;
+            break;
     }
+
+    // Image 
+    int image_height = static_cast<int>(image_width / aspect_ratio);
+    const int pixelCount = image_height*image_width;
+    vec3* image = new vec3[image_height*image_width];
+    memset(&image[0], 0, image_height * image_width * sizeof(vec3));
 
     // Camera
 
@@ -206,13 +284,13 @@ int main(){
         std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
         for (int i = 0; i < image_width; ++i) {
             auto future_ = async(launch::async | launch::deferred, 
-            [&cam, &world, &samples_per_pixel, i, j, image_width, image_height, &cvResults]() -> RayResult{
+            [&cam, &world, &samples_per_pixel, &background, i, j, image_width, image_height, &cvResults]() -> RayResult{
                 color pixel_color(0, 0, 0);
                 for (int s = 0; s < samples_per_pixel; ++s) {
                     auto u = (i + random_double()) / (image_width-1);
                     auto v = (j + random_double()) / (image_height-1);
                     ray r = cam.get_ray(u, v);
-                    pixel_color += ray_color(r, world, max_depth);
+                    pixel_color += ray_color(r, background, world, max_depth);
                 }
                 // write_color(std::cout, pixel_color, samples_per_pixel);
                 pixel_color /= samples_per_pixel;
