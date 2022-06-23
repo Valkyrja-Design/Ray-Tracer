@@ -92,6 +92,18 @@ hittable_list two_perlin_spheres() {
 
     return objects;
 }
+
+hittable_list image_textures() {
+    hittable_list objects;
+    auto _texture = make_shared<image_texture>("texture images/Renne (1).png");
+    auto _surface = make_shared<lambertian>(_texture);
+    auto _texture1 = make_shared<image_texture>("texture images/Beautiful Mona.jpg");
+    auto _surface1 = make_shared<lambertian>(_texture1);
+    objects.add(make_shared<sphere>(point3(0, 0, -2), 2, _surface1));
+    objects.add(make_shared<sphere>(point3(0, 0, 2), 2, _surface));
+    return objects;
+}
+
 color ray_color(const ray& r, const hittable& world, int depth){
     hit_record rec;
 
@@ -115,15 +127,15 @@ color ray_color(const ray& r, const hittable& world, int depth){
     vec3 unit_direction = unit_vector(r.direction());
     auto t = 0.5*(unit_direction.y()+1.0);
     // Blends color between white and blue according to the y height of ray direction
-    return (1.0-t)*color(1.0, 1.0, 1.0)+t*color(0.5, 0.7, 1.0);
+    return (1.0-t)*color(1.0, 1.0, 1.0)+t*color(1.0, 1.0, 1.0);
 }   
 
 int main(){
     // Image dimensions
     const auto aspect_ratio = 16.0/9.0;
-    const int image_width = 400;
+    const int image_width = 800;
     const int image_height = static_cast<int>(image_width / aspect_ratio);
-    const int samples_per_pixel = 100;
+    const int samples_per_pixel = 200;
     const int max_depth = 50;
     const int pixelCount = image_height*image_width;
 
@@ -157,9 +169,16 @@ int main(){
             vfov = 20.0;
             break;
 
-        default:
         case 3:
             world = two_perlin_spheres();
+            lookfrom = point3(13,2,3);
+            lookat = point3(0,0,0);
+            vfov = 20.0;
+            break;
+        
+        default:
+        case 4:
+            world = image_textures();
             lookfrom = point3(13,2,3);
             lookat = point3(0,0,0);
             vfov = 20.0;
