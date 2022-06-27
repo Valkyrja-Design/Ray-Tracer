@@ -9,13 +9,13 @@ class xy_rect : public hittable {
         xy_rect(
             double _x0, double _x1, double _y0, double _y1, double _k,
             shared_ptr<material> m
-       ) : mat_ptr(m), x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k) {}
+       ) : x0(_x0), x1(_x1), y0(_y0), y1(_y1), k(_k), mat_ptr(m) {}
     
         virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
 
-        virtual bool bounding_box(double t0, double t1, aabb& output_bounding_box) const override {
+        virtual bool bounding_box(double time0, double time1, aabb& output_bounding_box) const override {
             // Pad the bounding box a bit in z direction 
-            output_bounding_box = aabb(point3(x0, y0, k-0.001), point3(x1, y1, k+0.001));
+            output_bounding_box = aabb(point3(x0, y0, k-0.0001), point3(x1, y1, k+0.0001));
             return true;
         }
 
@@ -35,10 +35,10 @@ class xz_rect : public hittable {
 
         virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
 
-        virtual bool bounding_box(double time0, double time1, aabb& output_box) const override {
+        virtual bool bounding_box(double time0, double time1, aabb& output_bounding_box) const override {
             // The bounding box must have non-zero width in each dimension, so pad the Y
             // dimension a small amount.
-            output_box = aabb(point3(x0,k-0.0001,z0), point3(x1, k+0.0001, z1));
+            output_bounding_box = aabb(point3(x0,k-0.0001,z0), point3(x1, k+0.0001, z1));
             return true;
         }
 
@@ -57,10 +57,10 @@ class yz_rect : public hittable {
 
         virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const override;
 
-        virtual bool bounding_box(double time0, double time1, aabb& output_box) const override {
+        virtual bool bounding_box(double time0, double time1, aabb& output_bounding_box) const override {
             // The bounding box must have non-zero width in each dimension, so pad the X
             // dimension a small amount.
-            output_box = aabb(point3(k-0.0001, y0, z0), point3(k+0.0001, y1, z1));
+            output_bounding_box = aabb(point3(k-0.0001, y0, z0), point3(k+0.0001, y1, z1));
             return true;
         }
 
@@ -70,9 +70,6 @@ class yz_rect : public hittable {
 };
 
 bool xy_rect :: hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
-    if (r.direction().z() == 0)
-        return false;
-    
     auto t = (k-r.origin().z()) / (r.direction().z());
 
     if (t < t_min || t_max < t)
@@ -90,7 +87,7 @@ bool xy_rect :: hit(const ray& r, double t_min, double t_max, hit_record& rec) c
     rec.p = r.at(t);
     rec.t = t;
     rec.mat_ptr = mat_ptr;
-    auto outward_normal = point3(0, 0, 1);
+    auto outward_normal = vec3(0, 0, 1);
     rec.set_face_normal(r, outward_normal);
 
     return true;
