@@ -23,39 +23,39 @@ class perlin{
             delete[] perm_z;
         }
 
-        double noise(const point3& p) const {
-            int i = static_cast<int>(4*p.x()) & 255;
-            int j = static_cast<int>(4*p.y()) & 255;
-            int k = static_cast<int>(4*p.z()) & 255;
-
-            return (randvec[perm_x[i] ^ perm_y[j] ^ perm_z[k]].length_squared());
-        }
-
         // double noise(const point3& p) const {
-        //     auto u = p.x() - floor(p.x());
-        //     auto v = p.y() - floor(p.y());
-        //     auto w = p.z() - floor(p.z());
+        //     int i = static_cast<int>(4*p.x()) & 255;
+        //     int j = static_cast<int>(4*p.y()) & 255;
+        //     int k = static_cast<int>(4*p.z()) & 255;
 
-        //     int i = static_cast<int>(floor(p.x()));
-        //     int j = static_cast<int>(floor(p.y()));
-        //     int k = static_cast<int>(floor(p.z()));
-
-        //     vec3 c[2][2][2];
-
-        //     for (int di=0;di<2;i++){
-        //         for (int dj=0;dj<2;dj++){
-        //             for (int dk=0;dk<2;dk++){
-        //                 c[di][dj][dk] = randvec[
-        //                     perm_x[(i+di) & 255] ^
-        //                     perm_y[(j+dj) & 255] ^
-        //                     perm_z[(k+dk) & 255]
-        //                 ];
-        //             }
-        //         }
-        //     }
-
-        //     return perlin_interpolation(c, u, v, w);
+        //     return (randvec[perm_x[i] ^ perm_y[j] ^ perm_z[k]].length_squared());
         // }
+
+        double noise(const point3& p) const {
+            auto u = p.x() - floor(p.x());
+            auto v = p.y() - floor(p.y());
+            auto w = p.z() - floor(p.z());
+
+            int i = static_cast<int>(floor(p.x()));
+            int j = static_cast<int>(floor(p.y()));
+            int k = static_cast<int>(floor(p.z()));
+
+            vec3 c[2][2][2];
+
+            for (int di=0;di<2;i++){
+                for (int dj=0;dj<2;dj++){
+                    for (int dk=0;dk<2;dk++){
+                        c[di][dj][dk] = randvec[
+                            perm_x[(i+di) & 255] ^
+                            perm_y[(j+dj) & 255] ^
+                            perm_z[(k+dk) & 255]
+                        ];
+                    }
+                }
+            }
+
+            return perlin_interpolation(c, u, v, w);
+        }
 
         double turbulance(const point3& p, int depth = 7) const {
             auto sum = 0.0;
